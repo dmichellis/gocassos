@@ -106,7 +106,7 @@ func (o *Object) push_metadata() error {
 
 	for idx, cons := range o.cfg.write_consistency {
 		if err = o.cfg.Conn.Query(o.pusher_expiration_queries[0], o.Objectname, o.Updated, o.Nodetag, o.NumChunks, o.ObjectSize, o.ChunkSize, filepath.Dir(o.Objectname)).Consistency(cons).Exec(); err != nil {
-			WTF.Printf("[%s] OBJECT_PUSH: Failed pushing metadata for %s with consistency %s (%s) - will retry with a different consistency", o.ClientId, o.id, o.cfg.write_consistency_str[idx])
+			WTF.Printf("[%s] OBJECT_PUSH: Failed pushing metadata for %s with consistency %s (%s) - will retry with a different consistency", o.ClientId, o.id, o.cfg.write_consistency_str[idx], err)
 		} else {
 			if idx > 0 {
 				FYI.Printf("[%s] OBJECT_PUSH: Succeeded pushing %s with consistency %s", o.ClientId, o.id, o.cfg.write_consistency_str[idx])
@@ -136,7 +136,7 @@ func (o *Object) push_chunk(chunk int64, payload *[]byte) {
 	var err error
 	for idx, cons := range o.cfg.write_consistency {
 		if err = o.cfg.Conn.Query(o.pusher_expiration_queries[1], o.Objectname, o.Updated, o.Nodetag, chunk, payload).Consistency(cons).Exec(); err != nil {
-			WTF.Printf("[%s] OBJECT_PUSH: Failed pushing chunk %d on %s with consistency %s (%s) - will retry with a different consistency", o.ClientId, chunk, o.id, o.cfg.write_consistency_str[idx])
+			WTF.Printf("[%s] OBJECT_PUSH: Failed pushing chunk %d on %s with consistency %s (%s) - will retry with a different consistency", o.ClientId, chunk, o.id, o.cfg.write_consistency_str[idx], err)
 
 		} else {
 			if idx > 0 {
