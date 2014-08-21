@@ -27,8 +27,9 @@ func (c *ObjectStorage) lookup(client_identifier, objectname *string, internal b
 	}
 
 	var err error
+	var ttl int64
 	for index, cons := range c.read_consistency {
-		if err = c.Conn.Query(`SELECT objectname, updated, nodetag, num_chunks, chunk_size, object_size FROM objects WHERE objectname = ? ORDER BY updated DESC LIMIT 1`, *objectname).Consistency(cons).Scan(&o.Objectname, &o.Updated, &o.Nodetag, &o.NumChunks, &o.ChunkSize, &o.ObjectSize); err != nil {
+		if err = c.Conn.Query(`SELECT objectname, updated, nodetag, num_chunks, chunk_size, object_size, TTL(num_chunks) FROM objects WHERE objectname = ? ORDER BY updated DESC LIMIT 1`, *objectname).Consistency(cons).Scan(&o.Objectname, &o.Updated, &o.Nodetag, &o.NumChunks, &o.ChunkSize, &o.ObjectSize, &ttl); err != nil {
 			if !internal {
 				WTF.Printf("[%s] LOOKUP: Consistency '%s' returned '%s' for %s", o.ClientId, c.read_consistency_str[index], err, *objectname)
 			}
@@ -41,6 +42,10 @@ func (c *ObjectStorage) lookup(client_identifier, objectname *string, internal b
 			// set up assorted internal stuff here
 			o.failure = false
 			o.set_id()
+			FYI.Printf("ttl %d", ttl)
+			if ttl != 0 {
+				o.Expiration = time.Unix(time.Now().Unix()+ttl, 0)
+			}
 			return o, nil
 		}
 	}
@@ -49,11 +54,4 @@ func (c *ObjectStorage) lookup(client_identifier, objectname *string, internal b
 
 func (o *Object) set_id() {
 	o.id = fmt.Sprintf("['%s' %d %s]", o.Objectname, o.Updated, o.Nodetag)
-}
-
-func (o *Object) FullName() string {
-	if o == nil {
-		return ""
-	}
-	return o.id
 }

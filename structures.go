@@ -56,8 +56,7 @@ type Object struct {
 	NumChunks  int64
 	ChunkSize  int64
 	ObjectSize int64
-
-	pusher_expiration_queries []string
+	Expiration time.Time
 
 	finished_chunks chan int64
 	fetcher_control chan struct{}

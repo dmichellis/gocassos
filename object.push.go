@@ -1,7 +1,6 @@
 package gocassos
 
 import (
-	"fmt"
 	"io"
 	"path/filepath"
 	"time"
@@ -32,7 +31,7 @@ func (c *ObjectStorage) PreparePush(client_identifier, objectname string) (*Obje
 	return o, nil
 }
 
-func (o *Object) Push(expiration int64) error {
+func (o *Object) Push() error {
 	if o == nil {
 		return ErrNullReference
 	}
@@ -48,18 +47,10 @@ func (o *Object) Push(expiration int64) error {
 		o.PushTime = time.Since(o.push_start)
 	}()
 
-	if expiration > 0 {
-		BTW.Printf("[%s] PUSH: Starting for %s (expires in %ds)", o.ClientId, o.id, expiration)
-		o.pusher_expiration_queries = []string{
-			fmt.Sprintf("INSERT INTO objects (objectname, updated, nodetag, num_chunks, object_size, chunk_size, path) VALUES (?, ?, ?, ?, ?, ?, ?) USING TTL %d", expiration),
-			fmt.Sprintf("INSERT INTO object_chunks (objectname, updated, nodetag, chunk_num, payload) VALUES (?, ?, ?, ?, ?) USING TTL %d", expiration),
-		}
+	if ttl := o.Ttl(); ttl != 0 {
+		BTW.Printf("[%s] PUSH: Starting for %s (expires in %ds)", o.ClientId, o.id, ttl)
 	} else {
 		BTW.Printf("[%s] PUSH: Starting for %s", o.ClientId, o.id)
-		o.pusher_expiration_queries = []string{
-			fmt.Sprintf("INSERT INTO objects (objectname, updated, nodetag, num_chunks, object_size, chunk_size, path) VALUES (?, ?, ?, ?, ?, ?, ?)"),
-			fmt.Sprintf("INSERT INTO object_chunks (objectname, updated, nodetag, chunk_num, payload) VALUES (?, ?, ?, ?, ?)"),
-		}
 	}
 
 	if o.cfg.ConcurrentPutsPerObj > 0 {
@@ -105,7 +96,7 @@ func (o *Object) push_metadata() error {
 	var err error
 
 	for idx, cons := range o.cfg.write_consistency {
-		if err = o.cfg.Conn.Query(o.pusher_expiration_queries[0], o.Objectname, o.Updated, o.Nodetag, o.NumChunks, o.ObjectSize, o.ChunkSize, filepath.Dir(o.Objectname)).Consistency(cons).Exec(); err != nil {
+		if err = o.cfg.Conn.Query(`INSERT INTO objects (objectname, updated, nodetag, num_chunks, object_size, chunk_size, path) VALUES (?, ?, ?, ?, ?, ?, ?) USING TTL ?`, o.Objectname, o.Updated, o.Nodetag, o.NumChunks, o.ObjectSize, o.ChunkSize, filepath.Dir(o.Objectname), o.Ttl()).Consistency(cons).Exec(); err != nil {
 			WTF.Printf("[%s] OBJECT_PUSH: Failed pushing metadata for %s with consistency %s (%s) - will retry with a different consistency", o.ClientId, o.id, o.cfg.write_consistency_str[idx], err)
 		} else {
 			if idx > 0 {
@@ -135,9 +126,8 @@ func (o *Object) push_chunk(chunk int64, payload *[]byte) {
 
 	var err error
 	for idx, cons := range o.cfg.write_consistency {
-		if err = o.cfg.Conn.Query(o.pusher_expiration_queries[1], o.Objectname, o.Updated, o.Nodetag, chunk, payload).Consistency(cons).Exec(); err != nil {
+		if err = o.cfg.Conn.Query(`INSERT INTO object_chunks (objectname, updated, nodetag, chunk_num, payload) VALUES (?, ?, ?, ?, ?) USING TTL ?`, o.Objectname, o.Updated, o.Nodetag, chunk, payload, o.Ttl()).Consistency(cons).Exec(); err != nil {
 			WTF.Printf("[%s] OBJECT_PUSH: Failed pushing chunk %d on %s with consistency %s (%s) - will retry with a different consistency", o.ClientId, chunk, o.id, o.cfg.write_consistency_str[idx], err)
-
 		} else {
 			if idx > 0 {
 				FYI.Printf("[%s] OBJECT_PUSH: Succeeded for chunk %d on %s with consistency %s", o.ClientId, chunk, o.id, o.cfg.write_consistency_str[idx])

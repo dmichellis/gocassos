@@ -53,12 +53,14 @@ func main() {
 	if err != nil {
 		FUUU.Printf("Lookup failed for borf %s", ee)
 	}
+    FYI.Printf("Time to live for this object: %d", o.Ttl())
 
     o, err = c.PreparePush("local cli", "/other/thing.txt")
 	if err != nil {
 		FUUU.Fatalf("Failed: %s", err)
 	}
 	o.ChunkSize = 100000
+    o.Expiration = time.Unix( time.Now().Unix() + 86400, 0 )
 	f, err_f := os.Open("/local/file.txt")
 	if err_f != nil {
 		FUUU.Printf("Failed: %s", err_f)
@@ -66,7 +68,7 @@ func main() {
 	}
 	o.InputHandler = f
 
-	o.Push(0) // 0 means no expiration
+	o.Push()
 	FYI.Printf("Took %0.4fs", o.PushTime.Seconds())
 
     // let us now fetch our file
