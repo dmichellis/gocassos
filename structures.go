@@ -115,6 +115,12 @@ const (
 	HeadMode
 )
 
+var TransferModes = map[string]int{
+	"stream": StreamMode,
+	"batch":  BatchMode,
+	"head":   HeadMode,
+}
+
 var ErrNullReference = errors.New("Null object reference")
 var ErrRefused = errors.New("Update refused")
 var ErrNotFound = errors.New("Not Found")
