@@ -37,6 +37,14 @@ var WTF = Logger{prefix: "WTF?!", level: 1}
 var FUUU = Logger{prefix: "FUUU!", level: 0}
 var FUU = Logger{prefix: "FUUU!", level: 0}
 
+func GetLogLevel() int {
+	return LogLevel
+}
+
+func SetLogLevel(i int) {
+	LogLevel = i
+}
+
 func KewlLogLevelNames() {
 	NVM.prefix = "NVM  "
 	BTW.prefix = "BTW  "

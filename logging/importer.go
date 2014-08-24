@@ -4,6 +4,8 @@ import "github.com/dmichellis/gocassos"
 
 // so you can import . github.com/dmichellis/gocassos/logging and use those
 var LogLevel = &gocassos.LogLevel
+var SetLogLevel = gocassos.SetLogLevel
+var GetLogLevel = gocassos.GetLogLevel
 var KewlLogLevelNames = gocassos.KewlLogLevelNames
 var BoringLogLevelNames = gocassos.BoringLogLevelNames
 
