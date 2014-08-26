@@ -35,6 +35,7 @@ CREATE TABLE objects (
   nodetag uuid,
   checksum text,
   chunk_size bigint,
+  metadata map<text,text>,
   num_chunks bigint,
   object_size bigint,
   path text,

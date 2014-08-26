@@ -57,6 +57,7 @@ type Object struct {
 	ChunkSize  int64
 	ObjectSize int64
 	Expiration time.Time
+	Metadata   map[string]string
 
 	finished_chunks chan int64
 	fetcher_control chan struct{}
@@ -115,14 +116,16 @@ const (
 	HeadMode
 )
 
-var TransferModes = map[string]int{
-	"stream": StreamMode,
-	"batch":  BatchMode,
-	"head":   HeadMode,
-}
+var (
+	TransferModes = map[string]int{
+		"stream": StreamMode,
+		"batch":  BatchMode,
+		"head":   HeadMode,
+	}
 
-var ErrNullReference = errors.New("Null object reference")
-var ErrRefused = errors.New("Update refused")
-var ErrNotFound = errors.New("Not Found")
-var ErrChunksFailed = errors.New("Failed to push chunks")
-var ErrCassandraNotConnected = errors.New("Cassandra not connected")
+	ErrNullReference         = errors.New("Null object reference")
+	ErrRefused               = errors.New("Update refused")
+	ErrNotFound              = errors.New("Not Found")
+	ErrChunksFailed          = errors.New("Failed to push chunks")
+	ErrCassandraNotConnected = errors.New("Cassandra not connected")
+)

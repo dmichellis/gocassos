@@ -27,6 +27,7 @@ func (c *ObjectStorage) PreparePush(client_identifier, objectname string) (*Obje
 	o.ChunkSize = c.ChunkSize
 	o.Updated = int64(time.Now().Unix())
 	o.Nodetag, _ = gocql.RandomUUID()
+	o.Metadata = make(map[string]string)
 	o.set_id()
 	return o, nil
 }
@@ -96,7 +97,7 @@ func (o *Object) push_metadata() error {
 	var err error
 
 	for idx, cons := range o.cfg.write_consistency {
-		if err = o.cfg.Conn.Query(`INSERT INTO objects (objectname, updated, nodetag, num_chunks, object_size, chunk_size, path) VALUES (?, ?, ?, ?, ?, ?, ?) USING TTL ?`, o.Objectname, o.Updated, o.Nodetag, o.NumChunks, o.ObjectSize, o.ChunkSize, filepath.Dir(o.Objectname), o.Ttl()).Consistency(cons).Exec(); err != nil {
+		if err = o.cfg.Conn.Query(`INSERT INTO objects (objectname, updated, nodetag, num_chunks, object_size, chunk_size, path, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?) USING TTL ?`, o.Objectname, o.Updated, o.Nodetag, o.NumChunks, o.ObjectSize, o.ChunkSize, filepath.Dir(o.Objectname), o.Metadata, o.Ttl()).Consistency(cons).Exec(); err != nil {
 			WTF.Printf("[%s] OBJECT_PUSH: Failed pushing metadata for %s with consistency %s (%s) - will retry with a different consistency", o.ClientId, o.id, o.cfg.write_consistency_str[idx], err)
 		} else {
 			if idx > 0 {
