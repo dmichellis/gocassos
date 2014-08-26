@@ -75,7 +75,6 @@ func (h *HttpOutputHandler) stream_output(payload *[]uint8, offset *int64) (int,
 	if err != nil {
 		h.o.failure = true
 		h.failure = true
-		close(h.pipeline)
 	} else {
 		chunk := h.mark_chunk_ready(offset)
 		h.pipeline <- chunk
@@ -132,6 +131,7 @@ func (h *HttpOutputHandler) Close() error {
 	switch h.mode {
 	case StreamMode:
 		NVM.Printf("[%s] HTTP_STREAM: Received all chunks and waiting end of streaming for %s", h.o.ClientId, h.o.FullName())
+		close(h.pipeline)
 		h.in_progress.Wait()
 		h.check_chunk_status()
 		if h.failure {
