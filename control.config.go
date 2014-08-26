@@ -43,3 +43,9 @@ func parse_consistency(names *[]string) ([]gocql.Consistency, error) {
 	}
 	return tmp, nil
 }
+
+func (c *ObjectStorage) Wait() {
+	if c != nil {
+		c.in_progress.Wait()
+	}
+}
