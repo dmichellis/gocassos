@@ -25,6 +25,9 @@ type HttpOutputHandler struct {
 	mode     int
 	pipeline chan int64
 
+	already_closed bool
+	mu             sync.Mutex
+
 	waiting_for_chunk int64
 	chunk_status      []bool
 }

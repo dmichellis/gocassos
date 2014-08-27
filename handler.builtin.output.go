@@ -125,6 +125,15 @@ func (h *HttpOutputHandler) Close() error {
 	if h == nil {
 		return ErrNullReference
 	}
+	// Protect Close() so you can both evaluate the error and use it as a deferred cleanup
+	h.mu.Lock()
+	if h.already_closed {
+		h.mu.Unlock() // unlock ASAP so other routines can also Close() in case of errors
+		return errors.New("Already closed")
+	}
+	h.already_closed = true
+	h.mu.Unlock()
+
 	defer h.o.cfg.in_progress.Done()
 	defer h.t.Close()
 
@@ -136,6 +145,7 @@ func (h *HttpOutputHandler) Close() error {
 		h.check_chunk_status()
 		if h.failure {
 			FUUU.Printf("[%s] HTTP_STREAM: Aborting streaming of %s due to failure (took %0.3fs)", h.o.ClientId, h.o.id, time.Since(h.o.fetch_start).Seconds())
+			return errors.New("Failed to retrieve from the backend")
 		}
 
 	case BatchMode:
@@ -144,15 +154,17 @@ func (h *HttpOutputHandler) Close() error {
 		if h.failure {
 			FUUU.Printf("[%s] HTTP_BUFFER: Returning NotFound due to failure for %s (took %0.3fs)", h.o.ClientId, h.o.id, time.Since(h.o.fetch_start).Seconds())
 			http.NotFound(h.w, h.r)
-			return nil
+			return errors.New("Failed to retrieve from the backend")
 		}
 		FYI.Printf("[%s] HTTP_BUFFER: Sending %s to client (took %0.3fs)", h.o.ClientId, h.o.id, time.Since(h.o.fetch_start).Seconds())
 		h.send_output_headers()
 		h.t.Seek(0, 0)
 		io.Copy(h.w, h.t)
 		return nil
+	default:
+		return errors.New("Unknown transfer mode")
 	}
-	return errors.New("Unknown transfer mode")
+	return nil
 }
 
 func (h *HttpOutputHandler) WriteAt(payload []byte, offset int64) (int, error) {
@@ -182,6 +194,7 @@ func (o *Object) NewHttpOutputHandler(w http.ResponseWriter, r *http.Request, mo
 	h.r = r
 	h.t = t
 	h.o = o
+	h.already_closed = false
 	h.chunk_status = make([]bool, o.NumChunks)
 	o.cfg.in_progress.Add(1)
 

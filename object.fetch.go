@@ -50,6 +50,10 @@ func (o *Object) Fetch() error {
 		return fmt.Errorf("Failure fetching chunks (%d/%d)", chunk, o.NumChunks)
 	}
 
+	if close_err := o.OutputHandler.Close(); close_err != nil {
+		return close_err
+	}
+
 	return nil
 }
 
