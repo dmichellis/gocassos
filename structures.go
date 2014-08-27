@@ -123,6 +123,12 @@ var (
 		"head":   HeadMode,
 	}
 
+	TransferModeCodes = map[int]string{
+		StreamMode: "stream",
+		BatchMode:  "batch",
+		HeadMode:   "head",
+	}
+
 	ErrNullReference         = errors.New("Null object reference")
 	ErrRefused               = errors.New("Update refused")
 	ErrNotFound              = errors.New("Not Found")
