@@ -68,9 +68,9 @@ func (o *Object) Push() error {
 
 		if read_err != nil && read_err != io.EOF && read_err != io.ErrUnexpectedEOF {
 			FUUU.Printf("[%s] OBJECT_PUSH: Failed to read chunk %d on %s (%s) - aborting", o.ClientId, o.NumChunks, o.id, read_err)
-			o.Remove()
+			o.remove()
 			close(o.pusher_control)
-			return nil
+			return read_err
 		}
 		o.in_progress.Add(1)
 		go o.push_chunk(o.NumChunks, &payload)
@@ -90,7 +90,7 @@ func (o *Object) Push() error {
 func (o *Object) push_metadata() error {
 	if o.failure {
 		FUUU.Printf("[%s] OBJECT_PUSH: Aborting push for %s", o.ClientId, o.id)
-		o.Remove()
+		o.remove()
 		return ErrChunksFailed
 	}
 
@@ -109,7 +109,7 @@ func (o *Object) push_metadata() error {
 	if err != nil {
 		FUUU.Printf("[%s] OBJECT_PUSH: write failed %s (%s) - aborting", o.ClientId, o.id, err)
 		o.failure = true
-		o.Remove()
+		o.remove()
 		return err
 	}
 	o.CleanupDupes()

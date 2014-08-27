@@ -9,13 +9,18 @@ import (
 
 func (o *Object) Remove() error {
 	if !o.cfg.AllowUpdates {
-		FYI.Printf("[%s] PUSH: Refusing to delete object %s (%0.3fs lookup)", o.ClientId, o.id, o.LookupTime.Seconds())
+		FYI.Printf("[%s] DELETE: Refusing to delete object %s (%0.3fs lookup)", o.ClientId, o.id, o.LookupTime.Seconds())
 		return ErrRefused
 	}
+	o.remove()
+	return nil
+}
+
+func (o *Object) remove() {
 	o.cfg.in_progress.Add(1)
 	NVM.Printf("REMOVE: Removing %s", o.id)
 	go o.async_remove()
-	return nil
+	return
 }
 
 func (o *Object) async_remove() {
