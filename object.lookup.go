@@ -40,8 +40,8 @@ func (c *ObjectStorage) lookup(client_identifier, objectname *string, internal b
 				}
 			}
 			// set up assorted internal stuff here
-			o.failure = false
 			o.set_id()
+			o.failure = nil
 			if ttl != 0 {
 				o.Expiration = time.Unix(time.Now().Unix()+ttl, 0)
 			}

@@ -88,7 +88,7 @@ func (o *Object) Push() error {
 }
 
 func (o *Object) push_metadata() error {
-	if o.failure {
+	if o.failure != nil {
 		FUUU.Printf("[%s] OBJECT_PUSH: Aborting push for %s", o.ClientId, o.id)
 		o.remove()
 		return ErrChunksFailed
@@ -108,7 +108,7 @@ func (o *Object) push_metadata() error {
 	}
 	if err != nil {
 		FUUU.Printf("[%s] OBJECT_PUSH: write failed %s (%s) - aborting", o.ClientId, o.id, err)
-		o.failure = true
+		o.failure = err
 		o.remove()
 		return err
 	}
@@ -138,7 +138,7 @@ func (o *Object) push_chunk(chunk int64, payload *[]byte) {
 	}
 	if err != nil {
 		FUUU.Printf("[%s] OBJECT_PUSH: write failed for chunk %d on %s (%s) - aborting", o.ClientId, chunk, o.id, err)
-		o.failure = true
+		o.failure = err
 	}
 	return
 }

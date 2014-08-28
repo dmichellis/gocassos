@@ -36,7 +36,7 @@ func (o *Object) Fetch() error {
 	}
 
 	var chunk int64
-	for chunk = 0; chunk < o.NumChunks && !o.failure; chunk++ {
+	for chunk = 0; chunk < o.NumChunks && o.failure == nil; chunk++ {
 		// Limit # of in flight requests per object fetch
 		if o.fetcher_control != nil {
 			o.fetcher_control <- struct{}{}
@@ -46,8 +46,8 @@ func (o *Object) Fetch() error {
 	}
 	o.in_progress.Wait()
 
-	if o.failure {
-		return fmt.Errorf("Failure fetching chunks (%d/%d)", chunk, o.NumChunks)
+	if o.failure != nil {
+		return o.failure
 	}
 
 	if close_err := o.OutputHandler.Close(); close_err != nil {
@@ -81,11 +81,11 @@ func (o *Object) fetch_chunk(chunk int64) {
 	}
 	if err != nil {
 		FUUU.Printf("[%s] FETCH: Failed to retrive chunk %d/%d for %s (%s) - aborting", o.ClientId, chunk, o.NumChunks, o.id, err)
-		o.failure = true
+		o.failure = fmt.Errorf("Failed to retrieve chunk %d/%d", chunk, o.NumChunks)
 		return
 	} else {
 		if _, err_out := o.OutputHandler.WriteAt(payload, chunk*o.ChunkSize); err_out != nil {
-			o.failure = true
+			o.failure = err_out
 			FUUU.Printf("[%s] FETCH: Output handler returned error '%s' for chunk %d/%d on %s - aborting", o.ClientId, err_out, chunk, o.NumChunks, o.id)
 		}
 	}

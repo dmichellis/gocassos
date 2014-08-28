@@ -6,7 +6,7 @@ func (o *Object) Status() string {
 	if o == nil {
 		return "UNKNOWN"
 	}
-	if o.failure {
+	if o.failure != nil {
 		return "ERR"
 	}
 	return "OK"

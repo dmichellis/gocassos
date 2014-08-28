@@ -14,7 +14,7 @@ type HttpInputHandler struct {
 	w           http.ResponseWriter
 	r           *http.Request
 	o           *Object
-	failure     bool
+	failure     error
 	in_progress sync.WaitGroup
 }
 
@@ -66,7 +66,9 @@ type Object struct {
 	fetcher_control chan struct{}
 	pusher_control  chan struct{}
 
-	failure     bool
+	// doesn't warrant a mutex; it's meant just to signal any concurrent
+	// routines that they shouldn't bother any more
+	failure     error
 	in_progress sync.WaitGroup
 
 	lookup_start time.Time

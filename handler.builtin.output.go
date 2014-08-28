@@ -53,8 +53,8 @@ func (h *HttpOutputHandler) streamer() {
 					}
 
 					FUUU.Printf("[%s] HTTP_STREAM: Error streaming %s %d/%d - %s", h.o.ClientId, h.o.id, check_chunk, h.o.NumChunks, err)
-					h.o.failure = true
-					h.failure = true
+					h.o.failure = err
+					h.failure = err
 					return
 				}
 			} else {
@@ -73,8 +73,8 @@ func (h *HttpOutputHandler) stream_output(payload *[]uint8, offset *int64) (int,
 	}
 	l, err := h.t.WriteAt(*payload, *offset)
 	if err != nil {
-		h.o.failure = true
-		h.failure = true
+		h.o.failure = err
+		h.failure = err
 	} else {
 		chunk := h.mark_chunk_ready(offset)
 		h.pipeline <- chunk
@@ -111,8 +111,9 @@ func (h *HttpOutputHandler) check_chunk_status() bool {
 	}
 	for idx, chunk_status := range h.chunk_status {
 		if chunk_status != true {
-			h.failure = true
-			h.o.failure = true
+			h.o.failure = fmt.Errorf("Missing chunk %d/%d", idx, h.o.NumChunks)
+			h.failure = h.o.failure
+
 			BTW.Printf("[%s] HTTP_OUTPUT: Missing chunk %d on %s - aborting", h.o.ClientId, idx, h.o.id)
 			return false
 		}
@@ -143,7 +144,7 @@ func (h *HttpOutputHandler) Close() error {
 		close(h.pipeline)
 		h.in_progress.Wait()
 		h.check_chunk_status()
-		if h.failure {
+		if h.failure != nil {
 			FUUU.Printf("[%s] HTTP_STREAM: Aborting streaming of %s due to failure (took %0.3fs)", h.o.ClientId, h.o.id, time.Since(h.o.fetch_start).Seconds())
 			return errors.New("Failed to retrieve from the backend")
 		}
@@ -151,7 +152,7 @@ func (h *HttpOutputHandler) Close() error {
 	case BatchMode:
 		h.check_chunk_status()
 
-		if h.failure {
+		if h.failure != nil {
 			FUUU.Printf("[%s] HTTP_BUFFER: Returning NotFound due to failure for %s (took %0.3fs)", h.o.ClientId, h.o.id, time.Since(h.o.fetch_start).Seconds())
 			http.NotFound(h.w, h.r)
 			return errors.New("Failed to retrieve from the backend")

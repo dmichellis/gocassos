@@ -14,6 +14,7 @@ func (h *HttpInputHandler) RequestBodyInput(chunk, chunk_size int64) (*int64, *[
 			return &size, &payload, io.EOF
 		}
 		FUUU.Printf("[%s] INPUT_HTTP: Failed to read chunk %d (%d size) for %s (%s)", h.o.ClientId, chunk, chunk_size, h.o.id, err)
+		h.failure = err
 		return nil, nil, err
 	}
 	return &size, &payload, nil
