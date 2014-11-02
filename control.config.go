@@ -26,6 +26,7 @@ func (c *ObjectStorage) Init() {
 	c.ConcurrentGetsPerObj = 0
 	c.ConcurrentPutsPerObj = 0
 	c.ChunkSize = 1000
+	c.InlinePayloadMax = 0
 	c.SetConsistencies([]string{"one"}, []string{"one"})
 	return
 }

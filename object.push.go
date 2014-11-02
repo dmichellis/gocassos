@@ -72,6 +72,15 @@ func (o *Object) Push() error {
 			close(o.pusher_control)
 			return read_err
 		}
+
+		// inline_payload handling
+		if (read_err == io.EOF || read_err == io.ErrUnexpectedEOF) && o.NumChunks == 0 && len < o.cfg.InlinePayloadMax {
+			NVM.Printf("[%s] OBJECT_PUSH: Using Inline Payload for %s", o.ClientId, o.id)
+			o.tmp_payload = &payload
+			o.ObjectSize = int64(len)
+			break
+		}
+
 		o.in_progress.Add(1)
 		go o.push_chunk(o.NumChunks, &payload)
 
@@ -96,8 +105,12 @@ func (o *Object) push_metadata() error {
 
 	var err error
 
+	if o.tmp_payload == nil {
+		tmp_payload := make([]byte, 0)
+		o.tmp_payload = &tmp_payload
+	}
 	for idx, cons := range o.cfg.write_consistency {
-		if err = o.cfg.Conn.Query(`INSERT INTO objects (objectname, updated, nodetag, num_chunks, object_size, chunk_size, path, metadata) VALUES (?, ?, ?, ?, ?, ?, ?, ?) USING TTL ?`, o.Objectname, o.Updated, o.Nodetag, o.NumChunks, o.ObjectSize, o.ChunkSize, filepath.Dir(o.Objectname), o.Metadata, o.Ttl()).Consistency(cons).Exec(); err != nil {
+		if err = o.cfg.Conn.Query(`INSERT INTO objects (objectname, updated, nodetag, num_chunks, object_size, chunk_size, path, metadata, inline_payload) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) USING TTL ?`, o.Objectname, o.Updated, o.Nodetag, o.NumChunks, o.ObjectSize, o.ChunkSize, filepath.Dir(o.Objectname), o.Metadata, o.tmp_payload, o.Ttl()).Consistency(cons).Exec(); err != nil {
 			WTF.Printf("[%s] OBJECT_PUSH: Failed pushing metadata for %s with consistency %s (%s) - will retry with a different consistency", o.ClientId, o.id, o.cfg.write_consistency_str[idx], err)
 		} else {
 			if idx > 0 {
@@ -106,6 +119,8 @@ func (o *Object) push_metadata() error {
 			break
 		}
 	}
+	o.tmp_payload = nil
+
 	if err != nil {
 		FUUU.Printf("[%s] OBJECT_PUSH: write failed %s (%s) - aborting", o.ClientId, o.id, err)
 		o.failure = err

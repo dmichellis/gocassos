@@ -25,6 +25,8 @@ type HttpOutputHandler struct {
 	mode     int
 	pipeline chan int64
 
+	total_chunks int64
+
 	already_closed bool
 	mu             sync.Mutex
 
@@ -66,6 +68,8 @@ type Object struct {
 	fetcher_control chan struct{}
 	pusher_control  chan struct{}
 
+	tmp_payload *[]byte
+
 	// doesn't warrant a mutex; it's meant just to signal any concurrent
 	// routines that they shouldn't bother any more
 	failure     error
@@ -86,10 +90,12 @@ type Object struct {
 
 var consistencies = map[string]gocql.Consistency{
 	"localquorum": gocql.LocalQuorum,
+	"localone":    gocql.LocalOne,
 	"one":         gocql.One,
 	"quorum":      gocql.Quorum,
 	"any":         gocql.Any,
 	"all":         gocql.All,
+	"eachquorum":  gocql.EachQuorum,
 }
 
 type ObjectStorage struct {
@@ -98,6 +104,8 @@ type ObjectStorage struct {
 	AllowUpdates   bool
 	PopulatePaths  bool
 	ChunkSize      int64
+
+	InlinePayloadMax int
 
 	write_consistency_str []string
 	write_consistency     []gocql.Consistency
@@ -115,6 +123,7 @@ type Logger struct {
 	level  int
 }
 
+const inlinePayloadMarker = -1
 const (
 	StreamMode = iota
 	BatchMode

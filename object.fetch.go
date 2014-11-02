@@ -31,6 +31,17 @@ func (o *Object) Fetch() error {
 		o.FetchTime = time.Since(o.fetch_start)
 	}()
 
+	// Output the inline_payload if present
+	if o.NumChunks == 0 {
+		NVM.Printf("[%s] FETCH: Outputting using inline payload for %s", o.ClientId, o.id)
+		if _, err_inline := o.OutputHandler.WriteAt(*o.tmp_payload, 0); err_inline != nil {
+			o.failure = err_inline
+			FUUU.Printf("[%s] FETCH: Output handler returned error '%s' for inline payload on %s - aborting", o.ClientId, err_inline, o.id)
+			return o.failure
+		}
+		return nil
+	}
+
 	if o.cfg.ConcurrentGetsPerObj > 0 {
 		o.fetcher_control = make(chan struct{}, o.cfg.ConcurrentGetsPerObj)
 	}

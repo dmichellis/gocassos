@@ -13,12 +13,12 @@
 		},
 		{
 			"ImportPath": "github.com/gocql/gocql",
-			"Comment": "go1.1-130-g7bd964e",
-			"Rev": "7bd964ec83ae675586ba314806c02341c015c45b"
+			"Comment": "go1.1-264-g1287cf0",
+			"Rev": "1287cf06fb1df7935f4838bc5f051b52120c58f5"
 		},
 		{
 			"ImportPath": "github.com/golang/groupcache/lru",
-			"Rev": "8b25adc0f62632c810997cb38c21111a3f256bf4"
+			"Rev": "d2a1805917c4ba5f227d5b1f9a871dd274a07542"
 		},
 		{
 			"ImportPath": "speter.net/go/exp/math/dec/inf",

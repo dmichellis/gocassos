@@ -29,7 +29,8 @@ func (c *ObjectStorage) lookup(client_identifier, objectname *string, internal b
 	var err error
 	var ttl int64
 	for index, cons := range c.read_consistency {
-		if err = c.Conn.Query(`SELECT objectname, updated, nodetag, num_chunks, chunk_size, object_size, TTL(num_chunks), metadata FROM objects WHERE objectname = ? ORDER BY updated DESC LIMIT 1`, *objectname).Consistency(cons).Scan(&o.Objectname, &o.Updated, &o.Nodetag, &o.NumChunks, &o.ChunkSize, &o.ObjectSize, &ttl, &o.Metadata); err != nil {
+		var payload []uint8
+		if err = c.Conn.Query(`SELECT objectname, updated, nodetag, num_chunks, chunk_size, object_size, TTL(num_chunks), metadata, inline_payload FROM objects WHERE objectname = ? ORDER BY updated DESC LIMIT 1`, *objectname).Consistency(cons).Scan(&o.Objectname, &o.Updated, &o.Nodetag, &o.NumChunks, &o.ChunkSize, &o.ObjectSize, &ttl, &o.Metadata, &payload); err != nil {
 			if !internal {
 				WTF.Printf("[%s] LOOKUP: Consistency '%s' returned '%s' for %s", o.ClientId, c.read_consistency_str[index], err, *objectname)
 			}
@@ -41,6 +42,7 @@ func (c *ObjectStorage) lookup(client_identifier, objectname *string, internal b
 			}
 			// set up assorted internal stuff here
 			o.set_id()
+			o.tmp_payload = &payload
 			o.failure = nil
 			if ttl != 0 {
 				o.Expiration = time.Unix(time.Now().Unix()+ttl, 0)

@@ -11,7 +11,7 @@ import (
 )
 
 func (h *HttpOutputHandler) pretty_chunk_status() string {
-	pretty_chunk := make([]uint8, h.o.NumChunks)
+	pretty_chunk := make([]uint8, h.total_chunks)
 	for idx, value := range h.chunk_status {
 		pretty_chunk[idx] = uint8('_')
 		switch {
@@ -32,27 +32,27 @@ func (h *HttpOutputHandler) streamer() {
 	for {
 		chunk, open := <-h.pipeline
 		if !open {
-			NVM.Printf("[%s] HTTP_STREAN: Pipeline to the %s streamer closed on chunk %d/%d- aborting", h.o.ClientId, h.o.FullName(), h.waiting_for_chunk, h.o.NumChunks)
+			NVM.Printf("[%s] HTTP_STREAN: Pipeline to the %s streamer closed on chunk %d/%d- aborting", h.o.ClientId, h.o.FullName(), h.waiting_for_chunk, h.total_chunks)
 			return
 		}
 		h.chunk_status[chunk] = true
 		if NVM.Enabled() {
 			NVM.Printf("[%s] HTTP_STREAM: Chunk status for %s/%d: [%s]", h.o.ClientId, h.o.id, chunk, h.pretty_chunk_status())
 		}
-		for check_chunk := h.waiting_for_chunk; check_chunk < h.o.NumChunks; check_chunk++ {
+		for check_chunk := h.waiting_for_chunk; check_chunk < h.total_chunks; check_chunk++ {
 			if h.chunk_status[check_chunk] == true {
-				NVM.Printf("[%s] HTTP_STREAM: Sending %s chunk %d/%d", h.o.ClientId, h.o.id, check_chunk, h.o.NumChunks)
+				NVM.Printf("[%s] HTTP_STREAM: Sending %s chunk %d/%d", h.o.ClientId, h.o.id, check_chunk, h.total_chunks)
 				h.waiting_for_chunk = check_chunk + 1
 				h.t.Seek(check_chunk*h.o.ChunkSize, 0)
 				_, err := io.CopyN(h.w, h.t, h.o.ChunkSize)
 				if err != nil {
-					if err == io.EOF && h.waiting_for_chunk == h.o.NumChunks {
+					if err == io.EOF && h.waiting_for_chunk == h.total_chunks {
 						// streamed last chunk
 						BTW.Printf("[%s] HTTP_STREAM: Finished streaming for %s (took %0.3fs) %s", h.o.ClientId, h.o.id, time.Since(h.o.fetch_start).Seconds(), err)
 						return
 					}
 
-					FUUU.Printf("[%s] HTTP_STREAM: Error streaming %s %d/%d - %s", h.o.ClientId, h.o.id, check_chunk, h.o.NumChunks, err)
+					FUUU.Printf("[%s] HTTP_STREAM: Error streaming %s %d/%d - %s", h.o.ClientId, h.o.id, check_chunk, h.total_chunks, err)
 					h.o.failure = err
 					h.failure = err
 					return
@@ -106,12 +106,12 @@ func (h *HttpOutputHandler) send_output_headers() {
 
 // Check if we received all chunks
 func (h *HttpOutputHandler) check_chunk_status() bool {
-	if h.waiting_for_chunk+1 != h.o.NumChunks {
+	if h.waiting_for_chunk+1 != h.total_chunks {
 		return false
 	}
 	for idx, chunk_status := range h.chunk_status {
 		if chunk_status != true {
-			h.o.failure = fmt.Errorf("Missing chunk %d/%d", idx, h.o.NumChunks)
+			h.o.failure = fmt.Errorf("Missing chunk %d/%d", idx, h.total_chunks)
 			h.failure = h.o.failure
 
 			BTW.Printf("[%s] HTTP_OUTPUT: Missing chunk %d on %s - aborting", h.o.ClientId, idx, h.o.id)
@@ -196,7 +196,12 @@ func (o *Object) NewHttpOutputHandler(w http.ResponseWriter, r *http.Request, mo
 	h.t = t
 	h.o = o
 	h.already_closed = false
-	h.chunk_status = make([]bool, o.NumChunks)
+	h.total_chunks = o.NumChunks
+	// inline_payload support
+	if h.total_chunks == 0 {
+		h.total_chunks = 1
+	}
+	h.chunk_status = make([]bool, h.total_chunks)
 	o.cfg.in_progress.Add(1)
 
 	if mode == StreamMode {
