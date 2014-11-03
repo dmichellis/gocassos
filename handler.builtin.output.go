@@ -98,7 +98,10 @@ func (h *HttpOutputHandler) buffered_output(payload *[]uint8, offset *int64) (in
 }
 
 func (h *HttpOutputHandler) send_output_headers() {
-	h.w.Header().Set("Content-Type", "application/octet-stream")
+	// Do not touch content-type in case it was already set
+	if h.w.Header().Get("content-type") == "" {
+		h.w.Header().Set("Content-Type", "application/octet-stream")
+	}
 	h.w.Header().Add("ETag", fmt.Sprintf("%s", h.o.Nodetag))
 	h.w.Header().Add("Last-Modified", time.Unix(h.o.Updated, 0).Format(time.RFC1123))
 	h.w.Header().Add("Content-Length", fmt.Sprintf("%d", h.o.ObjectSize))
