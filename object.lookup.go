@@ -5,6 +5,14 @@ import (
 	"time"
 )
 
+func (c *ObjectStorage) Exists(objectname string) bool {
+	id := "internal"
+	if o, _ := c.lookup(&id, &objectname, true); o != nil {
+		return true
+	}
+	return false
+}
+
 func (c *ObjectStorage) Lookup(client_identifier, objectname string) (*Object, error) {
 	return c.lookup(&client_identifier, &objectname, false)
 }
